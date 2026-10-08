@@ -7,7 +7,7 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
     body {
-      background: #111;
+      background: #2b2b2b;
       color: #fff;
       font-family: system-ui, -apple-system, sans-serif;
       display: flex;
@@ -22,27 +22,29 @@
       width: 100%;
       max-width: 420px;
       height: 90vh;
-      background: #222;
-      border: 2px solid #444;
+      background: #3c4043;
+      border: 2px solid #5f6368;
       border-radius: 12px;
       overflow: hidden;
       display: flex;
       flex-direction: column;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
     }
     #scoreBoard {
-      padding: 10px 16px;
-      background: #1a1a1a;
+      padding: 12px 16px;
+      background: #23272a;
       display: flex;
       justify-content: space-between;
       font-weight: bold;
       font-size: 16px;
-      border-bottom: 2px solid #333;
+      border-bottom: 2px solid #5f6368;
+      color: #e8eaed;
     }
     canvas {
       flex: 1;
       width: 100%;
       height: 100%;
-      background: #181818;
+      background: #202124;
       touch-action: none;
     }
     #overlay {
@@ -74,14 +76,14 @@
 
 <div id="gameContainer">
   <div id="scoreBoard">
-    <div id="scoreText">Счёт: 0</div>
+    <div id="scoreText">Погоны: </div>
     <div id="livesText">Жизни: ❤️❤️❤️</div>
   </div>
   <canvas id="canvas"></canvas>
   
   <div id="overlay">
     <h1 id="titleText">Мясковский против Буханы</h1>
-    <p id="subText">Управляйте платформой касанием или мышкой!</p>
+    <p id="subText">Разбей все буханки стейком!</p>
     <button id="startBtn">Играть</button>
   </div>
 </div>
@@ -112,16 +114,16 @@
     updateUI();
 
     paddle = {
-      w: width * 0.25,
-      h: 14,
-      x: (width - width * 0.25) / 2,
+      w: width * 0.28,
+      h: 16,
+      x: (width - width * 0.28) / 2,
       y: height - 30
     };
 
     ball = {
       x: width / 2,
-      y: height - 50,
-      r: 8,
+      y: height - 60,
+      r: 14,
       dx: 4 * (Math.random() > 0.5 ? 1 : -1),
       dy: -4
     };
@@ -129,15 +131,15 @@
     blocks = [];
     const rows = 5;
     const cols = 6;
-    const padding = 6;
+    const padding = 8;
     const bWidth = (width - padding * (cols + 1)) / cols;
-    const bHeight = 20;
+    const bHeight = 28;
 
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         blocks.push({
           x: padding + c * (bWidth + padding),
-          y: 40 + r * (bHeight + padding),
+          y: 50 + r * (bHeight + padding),
           w: bWidth,
           h: bHeight,
           active: true
@@ -147,7 +149,8 @@
   }
 
   function updateUI() {
-    scoreText.innerText = 'Счёт: ' + score;
+    let starsCount = Math.floor(score / 10);
+    scoreText.innerText = 'Погоны: ' + '⭐️'.repeat(starsCount);
     livesText.innerText = 'Жизни: ' + '❤️'.repeat(Math.max(0, lives));
   }
 
@@ -186,7 +189,7 @@
         gameOver(false);
       } else {
         ball.x = width / 2;
-        ball.y = height - 50;
+        ball.y = height - 60;
         ball.dx = 4 * (Math.random() > 0.5 ? 1 : -1);
         ball.dy = -4;
       }
@@ -211,22 +214,25 @@
   function draw() {
     ctx.clearRect(0, 0, width, height);
 
-    ctx.fillStyle = '#ffcc00';
+    // Платформа цвета хаки (под стать погонам)
+    ctx.fillStyle = '#6b8e23'; 
     ctx.beginPath();
     ctx.roundRect(paddle.x, paddle.y, paddle.w, paddle.h, 6);
     ctx.fill();
 
-    ctx.fillStyle = '#ff4444';
-    ctx.beginPath();
-    ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
-    ctx.fill();
+    // Стейк 🥩
+    ctx.font = "24px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("🥩", ball.x, ball.y);
 
+    // Буханки хлеба 🍞
     blocks.forEach(b => {
       if (b.active) {
-        ctx.fillStyle = '#ff8800';
-        ctx.beginPath();
-        ctx.roundRect(b.x, b.y, b.w, b.h, 4);
-        ctx.fill();
+        ctx.font = "26px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("🍞", b.x + b.w / 2, b.y + b.h / 2);
       }
     });
   }
@@ -246,8 +252,8 @@
 
   function gameOver(win) {
     gameRunning = false;
-    titleText.innerText = win ? 'Победа! 🎉' : 'Игра окончена 💥';
-    startBtn.innerText = 'Играть снова';
+    titleText.innerText = win ? 'Звание получено! 🎉' : 'Стейк упал 💥';
+    startBtn.innerText = 'Сыграть снова';
     overlay.style.display = 'flex';
   }
 
