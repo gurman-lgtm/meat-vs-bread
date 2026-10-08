@@ -1,72 +1,260 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Мясковский против Буханы</title>
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            user-select: none;
-            -webkit-user-select: none;
-            touch-action: none;
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Мясковский против Буханы</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body {
+      background: #111;
+      color: #fff;
+      font-family: system-ui, -apple-system, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+    #gameContainer {
+      position: relative;
+      width: 100%;
+      max-width: 420px;
+      height: 90vh;
+      background: #222;
+      border: 2px solid #444;
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    #scoreBoard {
+      padding: 10px 16px;
+      background: #1a1a1a;
+      display: flex;
+      justify-content: space-between;
+      font-weight: bold;
+      font-size: 16px;
+      border-bottom: 2px solid #333;
+    }
+    canvas {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      background: #181818;
+      touch-action: none;
+    }
+    #overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.85);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      text-align: center;
+      padding: 20px;
+    }
+    #overlay h1 { font-size: 26px; color: #ffcc00; }
+    #startBtn {
+      padding: 14px 28px;
+      font-size: 18px;
+      font-weight: bold;
+      background: #ffcc00;
+      color: #111;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<div id="gameContainer">
+  <div id="scoreBoard">
+    <div id="scoreText">Счёт: 0</div>
+    <div id="livesText">Жизни: ❤️❤️❤️</div>
+  </div>
+  <canvas id="canvas"></canvas>
+  
+  <div id="overlay">
+    <h1 id="titleText">Мясковский против Буханы</h1>
+    <p id="subText">Управляйте платформой касанием или мышкой!</p>
+    <button id="startBtn">Играть</button>
+  </div>
+</div>
+
+<script>
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const overlay = document.getElementById('overlay');
+  const startBtn = document.getElementById('startBtn');
+  const scoreText = document.getElementById('scoreText');
+  const livesText = document.getElementById('livesText');
+  const titleText = document.getElementById('titleText');
+
+  let width, height;
+  function resize() {
+    width = canvas.width = canvas.clientWidth;
+    height = canvas.height = canvas.clientHeight;
+  }
+  window.addEventListener('resize', resize);
+
+  let paddle, ball, blocks, score, lives, gameRunning;
+
+  function init() {
+    resize();
+    score = 0;
+    lives = 3;
+    gameRunning = false;
+    updateUI();
+
+    paddle = {
+      w: width * 0.25,
+      h: 14,
+      x: (width - width * 0.25) / 2,
+      y: height - 30
+    };
+
+    ball = {
+      x: width / 2,
+      y: height - 50,
+      r: 8,
+      dx: 4 * (Math.random() > 0.5 ? 1 : -1),
+      dy: -4
+    };
+
+    blocks = [];
+    const rows = 5;
+    const cols = 6;
+    const padding = 6;
+    const bWidth = (width - padding * (cols + 1)) / cols;
+    const bHeight = 20;
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        blocks.push({
+          x: padding + c * (bWidth + padding),
+          y: 40 + r * (bHeight + padding),
+          w: bWidth,
+          h: bHeight,
+          active: true
+        });
+      }
+    }
+  }
+
+  function updateUI() {
+    scoreText.innerText = 'Счёт: ' + score;
+    livesText.innerText = 'Жизни: ' + '❤️'.repeat(Math.max(0, lives));
+  }
+
+  function movePaddle(clientX) {
+    const rect = canvas.getBoundingClientRect();
+    let x = clientX - rect.left - paddle.w / 2;
+    paddle.x = Math.max(0, Math.min(width - paddle.w, x));
+  }
+
+  canvas.addEventListener('mousemove', (e) => movePaddle(e.clientX));
+  canvas.addEventListener('touchmove', (e) => {
+    if (e.touches.length > 0) movePaddle(e.touches[0].clientX);
+  });
+
+  function update() {
+    if (!gameRunning) return;
+
+    ball.x += ball.dx;
+    ball.y += ball.dy;
+
+    if (ball.x - ball.r < 0 || ball.x + ball.r > width) ball.dx *= -1;
+    if (ball.y - ball.r < 0) ball.dy *= -1;
+
+    if (ball.y + ball.r >= paddle.y &&
+        ball.x >= paddle.x &&
+        ball.x <= paddle.x + paddle.w &&
+        ball.dy > 0) {
+      ball.dy *= -1;
+      ball.dx = 8 * ((ball.x - (paddle.x + paddle.w / 2)) / paddle.w);
+    }
+
+    if (ball.y - ball.r > height) {
+      lives--;
+      updateUI();
+      if (lives <= 0) {
+        gameOver(false);
+      } else {
+        ball.x = width / 2;
+        ball.y = height - 50;
+        ball.dx = 4 * (Math.random() > 0.5 ? 1 : -1);
+        ball.dy = -4;
+      }
+    }
+
+    blocks.forEach(b => {
+      if (!b.active) return;
+      if (ball.x > b.x && ball.x < b.x + b.w &&
+          ball.y - ball.r < b.y + b.h && ball.y + ball.r > b.y) {
+        b.active = false;
+        ball.dy *= -1;
+        score += 10;
+        updateUI();
+
+        if (blocks.every(block => !block.active)) {
+          gameOver(true);
         }
-        body {
-            background-color: #0d0f18;
-            color: #ffffff;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-        }
-        #game-container {
-            position: relative;
-            width: 100%;
-            max-width: 500px;
-            height: 100vh;
-            max-height: 900px;
-            background: linear-gradient(180deg, #0f1423 0%, #080a10 100%);
-            box-shadow: 0 0 30px rgba(0,0,0,0.8);
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-        }
-        #hud {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 15px;
-            background: rgba(15, 20, 35, 0.9);
-            border-bottom: 2px solid #2a3550;
-            z-index: 10;
-        }
-        
-        /* Полицейский погон */
-        .epaulette {
-            position: relative;
-            width: 160px;
-            height: 52px;
-            background: linear-gradient(135deg, #1b2845 0%, #274068 50%, #111a2e 100%);
-            border: 2px solid #e0aa3e;
-            border-radius: 6px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5), inset 0 0 8px rgba(224, 170, 62, 0.3);
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 4px 8px;
-            overflow: hidden;
-        }
-        .epaulette::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 4px;
-            height: 100%;
-            background: #d62828;
+      }
+    });
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, width, height);
+
+    ctx.fillStyle = '#ffcc00';
+    ctx.beginPath();
+    ctx.roundRect(paddle.x, paddle.y, paddle.w, paddle.h, 6);
+    ctx.fill();
+
+    ctx.fillStyle = '#ff4444';
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+    ctx.fill();
+
+    blocks.forEach(b => {
+      if (b.active) {
+        ctx.fillStyle = '#ff8800';
+        ctx.beginPath();
+        ctx.roundRect(b.x, b.y, b.w, b.h, 4);
+        ctx.fill();
+      }
+    });
+  }
+
+  function gameLoop() {
+    update();
+    draw();
+    if (gameRunning) requestAnimationFrame(gameLoop);
+  }
+
+  function startGame() {
+    init();
+    gameRunning = true;
+    overlay.style.display = 'none';
+    requestAnimationFrame(gameLoop);
+  }
+
+  function gameOver(win) {
+    gameRunning = false;
+    titleText.innerText = win ? 'Победа! 🎉' : 'Игра окончена 💥';
+    startBtn.innerText = 'Играть снова';
+    overlay.style.display = 'flex';
+  }
+
+  startBtn.addEventListener('click', startGame);
+  init();
+  draw();
+</script>
+
+</body>
+</html>
